@@ -1,0 +1,73 @@
+﻿@page "/ordersmanagement"
+@attribute [Authorize(Roles = BlazorShared.Authorization.Constants.Roles.ADMINISTRATORS)]
+@inherits BlazorAdmin.Helpers.BlazorComponent
+@namespace BlazorAdmin.Pages.OrderPage
+@using static BlazorShared.Models.Order
+
+<PageTitle>eShopOnWeb Admin: Manage Orders</PageTitle>
+
+<h1>Manage Orders</h1>
+
+@if (orders == null)
+{
+    <Spinner></Spinner>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Order Date</th>
+                <th>User</th>
+                <th>Total Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody class="cursor-pointer">
+            @foreach (var order in orders)
+            {
+                <tr @onclick="@(()=>DetailsClick(order.Id))">
+                    <td>
+                        @order.OrderDate.LocalDateTime
+                    </td>
+                    <td>
+                        @order.BuyerId
+                    </td>
+                    <td>
+                        $ @order.Total
+                    </td>
+                    <td>
+                        @if (order.Status == OrderStatus.approved)
+                        {
+                            <span class="badge badge-success">@order.Status</span>
+                        }
+                        @if (order.Status == OrderStatus.pending)
+                        {
+                            <span class="badge badge-warning">@order.Status</span>
+                        }
+                        @if (order.Status == OrderStatus.submitted)
+                        {
+                            <span class="badge badge-primary">@order.Status</span>
+                        }
+                        @if (order.Status == OrderStatus.cancelled)
+                        {
+                            <span class="badge badge-danger">@order.Status</span>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-primary btn-sm">
+                            Detail
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <Details @ref="DetailsComponent" OnStatusChangeClick="ReloadOrders"></Details>
+}
+
+@code {
+    
+}
