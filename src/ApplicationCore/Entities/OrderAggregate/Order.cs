@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Ardalis.GuardClauses;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
+using static BlazorShared.Models.Order;
 
 namespace Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 
@@ -44,4 +45,13 @@ public class Order : BaseEntity, IAggregateRoot
         }
         return total;
     }
+    public OrderStatus Status { get; set; }
+
+    public void UpdateOrderStatus(OrderStatus orderStatus)
+    {
+        Guard.Against.EnumOutOfRange(orderStatus, nameof(Status));
+
+        Status = orderStatus;
+    }
+
 }
