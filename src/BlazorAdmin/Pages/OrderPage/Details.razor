@@ -1,0 +1,180 @@
+﻿@inject ILogger<Details> Logger
+@inject IJSRuntime JSRuntime
+@inject IOrderService OrderService
+
+@inherits BlazorAdmin.Helpers.BlazorComponent
+
+@namespace BlazorAdmin.Pages.OrderPage
+@using static BlazorShared.Models.Order
+
+<div class="modal @_modalClass" tabindex="-1" role="dialog" style="display:@_modalDisplay">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Details @_item.Id</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+
+                @if (_item == null)
+                {
+                    <Spinner></Spinner>
+                }
+                else
+                {
+                    <div class="container">
+                        <div class="row">
+                            <dl class="col-md-6 dl-horizontal">
+                                <dt>
+                                    Order Id
+                                </dt>
+                                <dd>
+                                    @_item.Id
+                                </dd>
+                                <dt>
+                                    Order Status
+                                </dt>
+                                <dd>
+                                    <span class="badge badge-@(statusBadge)">@_item.Status</span>
+                                </dd>
+                            </dl>
+                            <dl class="col-md-6 dl-horizontal">
+                                <dt>
+                                    User
+                                </dt>
+                                <dd>
+                                    @_item.BuyerId
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="row">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                <th>Product Name</th>
+                                <th>Units</th>
+                                <th>Price</th>
+                                </thead>
+                                <tbody>
+                                    @foreach (var orderItem in _item.OrderItems)
+                                    {
+
+                                        <tr>
+                                            <td>@orderItem.ItemOrdered.ProductName</td>
+                                            <td>@orderItem.Units</td>
+                                            <td>@orderItem.UnitPrice x @orderItem.Units</td>
+                                        </tr>
+                                    }
+                                    <tr><th colspan="2" class="text-right">Total Price:</th> <th>$ @totalPrice</th></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+            </div>
+            <div class="modal-footer">
+                @if (_item.Status == Order.OrderStatus.pending)
+                {
+                    <button type="button" class="btn btn-success" data-dismiss="modal" @onclick="@(()=>ChangeStatus(1))">Approve</button>
+                }
+                @if (_item.Status == Order.OrderStatus.approved)
+                {
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="@(()=>ChangeStatus(3))">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal" @onclick="@(()=>ChangeStatus(2))">Submit</button>
+                }
+                @if (_item.Status == Order.OrderStatus.submitted)
+                {
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="@(()=>ChangeStatus(3))">Cancel</button>
+                }
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="Close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_showDetailsModal)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnStatusChangeClick { get; set; }
+
+    private string _modalDisplay = "none;";
+    private string _modalClass = "";
+    private bool _showDetailsModal = false;
+    private OrderDetail _item = new OrderDetail();
+    private decimal totalPrice = 0;
+    public string statusBadge = "secondary";
+    
+
+    public async Task Open(int id)
+    {
+
+        Logger.LogInformation("Now loading... /Order/Details/{Id}", id);
+
+        await new Css(JSRuntime).HideBodyOverflow();
+
+        _item = await OrderService.GetById(id);
+        StatusBadgeUpdate();
+
+        totalPrice = 0;
+        foreach (var item in _item.OrderItems)
+        {
+            totalPrice += (item.UnitPrice * item.Units);
+        }
+        _modalDisplay = "block;";
+        _modalClass = "Show";
+        _showDetailsModal = true;
+
+        StateHasChanged();
+    }
+
+    public async Task Close()
+    {
+        await new Css(JSRuntime).ShowBodyOverflow();
+
+        _modalDisplay = "none";
+        _modalClass = "";
+        _showDetailsModal = false;
+    }
+
+    public async Task ChangeStatus(int status)
+    {
+        switch (status)
+        {
+            case 0:
+                _item.Status = Order.OrderStatus.pending;
+                break;
+            case 1:
+                _item.Status = Order.OrderStatus.approved;
+                break;
+            case 2:
+                _item.Status = Order.OrderStatus.submitted;
+                break;
+            case 3:
+                _item.Status = Order.OrderStatus.cancelled;
+                break;
+            default:
+                break;
+        }
+        StatusBadgeUpdate();
+        Order order = _item;
+        order = await OrderService.ChangeStatus(order);
+        await OnStatusChangeClick.InvokeAsync(null);
+    } 
+    public void StatusBadgeUpdate()
+    {
+        if (_item.Status == OrderStatus.pending)
+            statusBadge = "warning";
+        if (_item.Status == OrderStatus.approved)
+            statusBadge = "success";
+        if (_item.Status == OrderStatus.submitted)
+            statusBadge = "primary";
+        if (_item.Status == OrderStatus.cancelled)
+            statusBadge = "danger";
+    }
+}
